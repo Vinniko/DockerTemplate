@@ -1,0 +1,47 @@
+version: '0.1'
+services:
+    app_database:
+        container_name: app_database
+        restart: always
+        build:
+            context: ./docker/images/database/mysql/
+            args:
+                - DATABASE_ROOT_PASSWORD=$DATABASE_ROOT_PASSWORD
+                - DATABASE_USER=$DATABASE_USER
+                - DATABASE_PASSWORD=$DATABASE_PASSWORD
+                - DATABASE_STARTUP_NAME=$DATABASE_STARTUP_NAME
+        ports:
+            - '3307:3306'
+        env_file:
+            - .env
+    app_example:
+        container_name: app_example
+        restart: 'no'
+        environment:
+            XDEBUG_CONFIG: "client_host=host.docker.internal mode=debug client_port=9001 start_with_request=yes"
+            XDEBUG_MODE: "debug"
+        build:
+            context: ./docker/images/php/
+        links:
+            - app_database
+        volumes:
+            - ../*path of project*:/app
+            - ./docker/projects/example/.env.local:/app/.env.local
+            - ./share/shared:/app/shared
+            - ./logs/example:/app/var/log
+    app_nginx:
+        container_name: app_nginx
+        restart: 'no'
+        build:
+            context: ./docker/images/nginx/
+        ports:
+            - '8080:8080'
+        links:
+            - app_example
+        depends_on:
+            - app_example
+        volumes:
+            - ../*path of project*:/app/example
+            - ./share/shared:/app/example/shared
+            - ./docker/hosts:/etc/nginx/conf.d
+            - ./logs/nginx:/var/log/nginx
